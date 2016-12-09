@@ -107,39 +107,118 @@ BOOL WaveFile::WriteWaveFile(char *filename)
 	}
 	return bResult;
 }
-BOOL WaveFile::Convolve(WaveFile& wave)
-{
+BOOL WaveFile::WriteWaveFile(char *filename, int a[],long size) {
 	BOOL bResult = FALSE;
 
+	// Save .WAV file
+	FILE* file = fopen(filename, "wb");
+	if (file != NULL)
+	{
+		DWORD chunk2Size = size*waveFmt.numChannels*waveFmt.bitsPerSample / 8;
+		waveRiff.riffSize = chunk2Size + 36;
+		// write RIFF
+
+		fwrite(&waveRiff, sizeof(_RIFF), 1, file);
+
+		//write fmt 
+		fwrite(&waveFmt, sizeof(_FMT), 1, file);
+
+		// Write data
+		BYTE dataChunkid[4] = { 'd', 'a', 't', 'a' };
+		fwrite(dataChunkid, sizeof(BYTE), 4, file);
+		fwrite(&chunk2Size, sizeof(DWORD), 1, file);
+		for (int i = 0; i < size; i++) {
+			unsigned char array[2];
+
+			array[1] = (unsigned char)((a[i] >> 8) & 0xFF);
+			array[0] = (unsigned char)(a[i] & 0xFF);
+			fwrite(array, sizeof(unsigned char), 2, file);
+		}
+
+		bResult = TRUE;
+
+		fclose(file);
+	}
+	return bResult;
+}
+LPBYTE wordToLpByte(WORD *dstData, long size) {
+	BYTE *lp;
+	lp = new BYTE[2 * size];
+	for (int i = 0; i < size; i++) {
+		unsigned char array[2];
+
+		array[1] = (unsigned char)((dstData[i] >> 8) & 0xFF);
+		array[0] = (unsigned char)(dstData[i] & 0xFF);
+		lp[2 * i] = array[0];
+		lp[2 * i + 1] = array[1];
+	}
+	return lp;
+}
+BOOL WaveFile::Convolve(char* impluseFile, char* outputFile,bool bLevel1)
+{
+	BOOL bResult = FALSE;
+	WaveFile impluseWave;
+	impluseWave.ReadWaveFile(impluseFile);
 	// Check for valid sound data
-	if (IsValid()  && wave.IsValid() )
+	if (IsValid()  && impluseWave.IsValid() )
 	{
 		// Check for valid sound format
-		if ((waveFmt.numChannels == wave.GetChannels()) && (waveFmt.sampleRate == wave.GetSampleRate()) && (waveFmt.bitsPerSample == wave.GetBitsPerSample()))
+		if ((waveFmt.numChannels == impluseWave.GetChannels())
+			&& (waveFmt.sampleRate == impluseWave.GetSampleRate())
+			&& (waveFmt.bitsPerSample == impluseWave.GetBitsPerSample()))
 		{
+			LPWORD lpSrcData = (LPWORD)impluseWave.GetData();
+			LPWORD lpDstData = (LPWORD)waveData;
+			
 			// Mix .WAVs
-			long sampleSize = min(waveDataSize, wave.GetSize()) / (waveFmt.bitsPerSample >> 3);
-			switch (waveFmt.bitsPerSample)
-			{
-			case 8:
-			{
-				LPBYTE lpSrcData = wave.GetData();
-				LPBYTE lpDstData = waveData;
-				float gain = log10(20.0f);
-				for (long i = 0; i<sampleSize; i++)
-				{
-					*lpDstData = (BYTE)(((*lpSrcData + *lpDstData) >> 1)*gain);
-					lpSrcData++;
-					lpDstData++;
-				}
-			}
-			break;
+			if (bLevel1) {
+				//long lpSrcSize = impluseWave.GetSize() / (waveFmt.bitsPerSample >> 3);
+				//float *srcData;
+				//srcData = new float[lpSrcSize];
 
-			case 16:
-			{
-				LPWORD lpSrcData = (LPWORD)wave.GetData();
-				LPWORD lpDstData = (LPWORD)waveData;
-				for (long i = 0; i<sampleSize; i++)
+				//for (long i = 0; i < lpSrcSize; i++) {
+				//	srcData[i] = (lpSrcData[i] - 32768) / 32768.0f;
+				//	//lpSrcData++;
+				//}
+				//long lpDstSize = waveDataSize / (waveFmt.bitsPerSample >> 3);
+				//float *dstData;
+				//dstData = new float[lpDstSize];
+
+				//for (long i = 0; i < lpDstSize; i++) {
+				//	dstData[i] = (lpDstData[i] - 32768) / 32768.0f;
+				//	//lpDstData++;
+				//}
+
+				//int *aDstData;
+				//aDstData = new int[lpSrcSize + lpDstSize - 1];
+				//for (long i = 0; i < lpSrcSize + lpDstSize - 1; i++)
+				//	aDstData[i] = 0;
+				//for (long i = 0; i < lpSrcSize; i++) {
+				//	for (long j = 0; j < lpDstSize; j++) {
+				//		aDstData[i + j] = aDstData[i + j] + dstData[j] * srcData[i];
+				//	}
+				//}
+				//WriteWaveFile(outputFile, &aDstData[0], lpSrcSize + lpDstSize - 1);
+				long lpSrcSize = impluseWave.GetSize() / (waveFmt.bitsPerSample >> 3);
+				long lpDstSize = waveDataSize / (waveFmt.bitsPerSample >> 3);
+				WORD *dstData;
+				dstData = new WORD[lpSrcSize + lpDstSize - 1];
+				for (long i = 0; i < lpSrcSize; i++) {
+					for (long j = 0; j < lpDstSize; j++) {
+						dstData[i+j] += (WORD)(lpSrcData[i] + lpDstData[j]);
+					}
+				}
+				//waveData = (LPBYTE)dstData;
+				waveData = wordToLpByte(&dstData[0], lpSrcSize + lpDstSize - 1);
+				
+				WriteWaveFile(outputFile);
+			}
+			else {//FFT
+				lpSrcData = (LPWORD)impluseWave.GetData();
+				lpDstData = (LPWORD)waveData;
+				long sampleSize = min(waveDataSize, impluseWave.GetSize()) / (waveFmt.bitsPerSample >> 3);
+
+				for (long i = 0; i < sampleSize; i++)
 				{
 					float sample1 = (*lpSrcData - 32768) / 32768.0f;
 					float sample2 = (*lpDstData - 32768) / 32768.0f;
@@ -150,12 +229,21 @@ BOOL WaveFile::Convolve(WaveFile& wave)
 					lpSrcData++;
 					lpDstData++;
 				}
-			}
-			break;
+
+				WriteWaveFile(outputFile);
 			}
 			bResult = TRUE;
+		}
+		else {
+			if (waveFmt.numChannels != impluseWave.GetChannels())
+				printf("%s \n", "Number of Channels is differnce.");
+			else if(waveFmt.sampleRate == impluseWave.GetSampleRate())
+				printf("%s \n", "Sample Rate is differnce.");
+			else if (waveFmt.bitsPerSample == impluseWave.GetBitsPerSample())
+				printf("%s \n", "Bits Per Sample is differnce.");
 		}
 	}
 
 	return bResult;
 }
+

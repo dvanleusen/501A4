@@ -42,13 +42,15 @@ public:
 	// Public methods
 	void ReadWaveFile(char *filename);
 	BOOL WriteWaveFile(char *filename);
+	BOOL WriteWaveFile(char *filename,int a[],  long size);
 	BOOL IsValid() { return (waveData != NULL); }
 	LPBYTE GetData() { return waveData; }
 	DWORD GetSize() { return waveDataSize; }
 	SHORT GetChannels() { return waveFmt.numChannels; }
 	DWORD GetSampleRate() { return waveFmt.sampleRate; }
 	SHORT GetBitsPerSample() { return waveFmt.bitsPerSample; }
-	BOOL Convolve(WaveFile& wave);
+	BOOL Convolve(char* impluseFile, char* outputFile, bool bLevel1);
+
 private:
 	// Private members
 	_RIFF waveRiff;

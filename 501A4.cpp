@@ -13,6 +13,7 @@
 
 #ifndef USE_Test
 WaveFile w_DryRecording, w_Impluse;
+bool bLevel1 = false;
 void main(int argc, char *argv[])
 {
 	//_WAVE w = ReadWaveFile("DrumsDry.wav");
