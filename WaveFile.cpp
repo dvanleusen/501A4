@@ -35,48 +35,45 @@ void WaveFile::ReadWaveFile(char *filename)
 			// Read fmt sub chunk
 			fread(&waveFmt, sizeof(_FMT), 1, file);
 
-			if ((strncmp((LPCSTR)waveFmt.chunkId, "fmt", 3) == 0))
+			if ((strncmp((LPCSTR)waveFmt.chunkId, "fmt", 3) == 0) && waveFmt.audioFormat == 1)
 			{
-				if (waveFmt.audioFormat == 1)
+				while (waveFmt.chunkSize > 16)
 				{
-					while (waveFmt.chunkSize > 16)
+					BYTE unuse;
+					fread(&unuse, sizeof(BYTE), 1, file);
+					waveFmt.chunkSize--;
+				}
+				// Read sub chunk
+				BYTE chunkId[4];
+				DWORD chunkSize;
+				fread(chunkId, sizeof(BYTE), 4, file);
+				fread(&chunkSize, sizeof(DWORD), 1, file);
+				DWORD fileOffset = ftell(file);
+
+				// Read data
+				LPBYTE tmpData = (LPBYTE)malloc(waveRiff.riffSize * sizeof(BYTE));
+				while (fileOffset < waveRiff.riffSize)
+				{
+					bool b = strncmp((LPCSTR)chunkId, "data", 4) == 0;
+					if (b)
 					{
-						BYTE unuse;
-						fread(&unuse, sizeof(BYTE), 1, file);
-						waveFmt.chunkSize--;
+						if (waveData == NULL)
+							waveData = (LPBYTE)malloc(chunkSize * sizeof(BYTE));
+						else
+							waveData = (LPBYTE)realloc(waveData, (waveDataSize + chunkSize) * sizeof(BYTE));
+						fread(waveData + waveDataSize, sizeof(BYTE), chunkSize, file);
+						waveDataSize += chunkSize;
 					}
-					// Read sub chunk
-					BYTE chunkId[4];
-					DWORD chunkSize;
+					else
+						fread(tmpData, sizeof(BYTE), chunkSize, file);
+
+					// Read next chunk
 					fread(chunkId, sizeof(BYTE), 4, file);
 					fread(&chunkSize, sizeof(DWORD), 1, file);
-					DWORD fileOffset = ftell(file);
-
-					// Read data
-					LPBYTE tmpData = (LPBYTE)malloc(waveRiff.riffSize * sizeof(BYTE));
-					while (fileOffset < waveRiff.riffSize)
-					{
-						bool b = strncmp((LPCSTR)chunkId, "data", 4) == 0;
-						if (b)
-						{
-							if (waveData == NULL)
-								waveData = (LPBYTE)malloc(chunkSize * sizeof(BYTE));
-							else
-								waveData = (LPBYTE)realloc(waveData, (waveDataSize + chunkSize) * sizeof(BYTE));
-							fread(waveData + waveDataSize, sizeof(BYTE), chunkSize, file);
-							waveDataSize += chunkSize;
-						}
-						else
-							fread(tmpData, sizeof(BYTE), chunkSize, file);
-
-						// Read next chunk
-						fread(chunkId, sizeof(BYTE), 4, file);
-						fread(&chunkSize, sizeof(DWORD), 1, file);
-						fileOffset = ftell(file);
-					}
-					free(tmpData);
-					waveRiff.riffSize = waveDataSize + 36;
+					fileOffset = ftell(file);
 				}
+				free(tmpData);
+				waveRiff.riffSize = waveDataSize + 36;
 			}
 		}
 		// Close .WAV file
