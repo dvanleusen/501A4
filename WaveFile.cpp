@@ -96,11 +96,7 @@ BOOL WaveFile::WriteWaveFile(char *filename)
 		fwrite(&waveFmt, sizeof(_FMT), 1, file);
 
 		// Write data
-		BYTE dataChunkid[4];		
-		dataChunkid[0] = 'd';
-		dataChunkid[1] = 'a';
-		dataChunkid[2] = 't';
-		dataChunkid[3] = 'a';
+		BYTE dataChunkid[4] = { 'd', 'a', 't', 'a' };
 		fwrite(dataChunkid, sizeof(BYTE), 4, file);
 		fwrite(&waveDataSize, sizeof(DWORD), 1, file);
 		fwrite(waveData, sizeof(BYTE), waveDataSize, file);
