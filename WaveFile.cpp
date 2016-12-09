@@ -7,10 +7,9 @@
 * <p>
 * This is a simple object with only primitive for instance variable.
 */
-#include "501A4.h"
+#include "convolve.h"
 #include <math.h>
 #include <stdio.h>
-//#include <wtypes.h>
 #include<corecrt_malloc.h>
 
 WaveFile::WaveFile(void)
@@ -36,44 +35,48 @@ void WaveFile::ReadWaveFile(char *filename)
 			// Read fmt sub chunk
 			fread(&waveFmt, sizeof(_FMT), 1, file);
 
-			if ((strncmp((LPCSTR)waveFmt.chunkId, "fmt", 3) == 0) && (waveFmt.audioFormat == 1))
+			if ((strncmp((LPCSTR)waveFmt.chunkId, "fmt", 3) == 0))
 			{
-				while (waveFmt.chunkSize>16)
+				if (waveFmt.audioFormat == 1)
 				{
-					BYTE unuse;
-					fread(&unuse, sizeof(BYTE), 1, file);
-					waveFmt.chunkSize--;
-				}
-				// Read sub chunk
-				BYTE chunkId[4];
-				DWORD chunkSize;
-				fread(chunkId, sizeof(BYTE), 4, file);			
-				fread(&chunkSize, sizeof(DWORD), 1, file);
-				DWORD fileOffset = ftell(file);
-
-				// Read data
-				LPBYTE tmpData = (LPBYTE)malloc(waveRiff.riffSize * sizeof(BYTE));
-				while (fileOffset < waveRiff.riffSize)
-				{
-					if (strncmp((LPCSTR)chunkId, "data", 4) == 0)
+					while (waveFmt.chunkSize > 16)
 					{
-						if (waveData == NULL)
-							waveData = (LPBYTE)malloc(chunkSize * sizeof(BYTE));
-						else
-							waveData = (LPBYTE)realloc(waveData, (waveDataSize + chunkSize) * sizeof(BYTE));
-						fread(waveData + waveDataSize, sizeof(BYTE), chunkSize, file);
-						waveDataSize += chunkSize;
+						BYTE unuse;
+						fread(&unuse, sizeof(BYTE), 1, file);
+						waveFmt.chunkSize--;
 					}
-					else
-						fread(tmpData, sizeof(BYTE), chunkSize, file);
-
-					// Read next chunk
+					// Read sub chunk
+					BYTE chunkId[4];
+					DWORD chunkSize;
 					fread(chunkId, sizeof(BYTE), 4, file);
 					fread(&chunkSize, sizeof(DWORD), 1, file);
-					fileOffset = ftell(file);
+					DWORD fileOffset = ftell(file);
+
+					// Read data
+					LPBYTE tmpData = (LPBYTE)malloc(waveRiff.riffSize * sizeof(BYTE));
+					while (fileOffset < waveRiff.riffSize)
+					{
+						bool b = strncmp((LPCSTR)chunkId, "data", 4) == 0;
+						if (b)
+						{
+							if (waveData == NULL)
+								waveData = (LPBYTE)malloc(chunkSize * sizeof(BYTE));
+							else
+								waveData = (LPBYTE)realloc(waveData, (waveDataSize + chunkSize) * sizeof(BYTE));
+							fread(waveData + waveDataSize, sizeof(BYTE), chunkSize, file);
+							waveDataSize += chunkSize;
+						}
+						else
+							fread(tmpData, sizeof(BYTE), chunkSize, file);
+
+						// Read next chunk
+						fread(chunkId, sizeof(BYTE), 4, file);
+						fread(&chunkSize, sizeof(DWORD), 1, file);
+						fileOffset = ftell(file);
+					}
+					free(tmpData);
+					waveRiff.riffSize = waveDataSize + 36;
 				}
-				free(tmpData);
-				waveRiff.riffSize = waveDataSize + 36;
 			}
 		}
 		// Close .WAV file
@@ -97,7 +100,11 @@ BOOL WaveFile::WriteWaveFile(char *filename)
 		fwrite(&waveFmt, sizeof(_FMT), 1, file);
 
 		// Write data
-		BYTE dataChunkid[4] = { 'd', 'a', 't', 'a' };
+		BYTE dataChunkid[4];		
+		dataChunkid[0] = 'd';
+		dataChunkid[1] = 'a';
+		dataChunkid[2] = 't';
+		dataChunkid[3] = 'a';
 		fwrite(dataChunkid, sizeof(BYTE), 4, file);
 		fwrite(&waveDataSize, sizeof(DWORD), 1, file);
 		fwrite(waveData, sizeof(BYTE), waveDataSize, file);
@@ -172,7 +179,6 @@ BOOL WaveFile::Convolve(char* impluseFile, char* outputFile,bool bLevel1)
 			
 			// Mix .WAVs
 			if (bLevel1) {
-#pragma region v1
 				long lpSrcSize = impluseWave.GetSize() / (waveFmt.bitsPerSample >> 3);
 				float *srcData;
 				srcData = new float[lpSrcSize];
@@ -200,30 +206,10 @@ BOOL WaveFile::Convolve(char* impluseFile, char* outputFile,bool bLevel1)
 					}
 				}
 				WriteWaveFile(outputFile, &aDstData[0], lpSrcSize + lpDstSize - 1);
-#pragma endregion
-
-				
-#pragma region v2
-				//long lpSrcSize = impluseWave.GetSize() / (waveFmt.bitsPerSample >> 3);
-				//long lpDstSize = waveDataSize / (waveFmt.bitsPerSample >> 3);
-				//WORD *dstData;
-				//dstData = new WORD[lpSrcSize + lpDstSize - 1];
-				//for (long i = 0; i < lpSrcSize; i++) {
-				//	for (long j = 0; j < lpDstSize; j++) {
-				//		dstData[i+j] += (WORD)(lpSrcData[i] + lpDstData[j]);
-				//	}
-				//}
-				////waveData = (LPBYTE)dstData;
-				//waveData = wordToLpByte(&dstData[0], lpSrcSize + lpDstSize - 1);
-				//
-				//WriteWaveFile(outputFile);
-#pragma endregion
 				
 			}
 			else {
-#pragma region DFTFFT
-				lpSrcData = (LPWORD)impluseWave.GetData();
-				lpDstData = (LPWORD)waveData;
+			//DFTFFT
 				long sampleSize = min(waveDataSize, impluseWave.GetSize()) / (waveFmt.bitsPerSample >> 3);
 
 				for (long i = 0; i < sampleSize; i++)
@@ -237,9 +223,7 @@ BOOL WaveFile::Convolve(char* impluseFile, char* outputFile,bool bLevel1)
 					lpSrcData++;
 					lpDstData++;
 				}
-
 				WriteWaveFile(outputFile);
-#pragma endregion
 			}
 			bResult = TRUE;
 		}

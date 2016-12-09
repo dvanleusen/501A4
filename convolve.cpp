@@ -8,7 +8,7 @@
 * This is a simple object with only primitive for instance variable.
 */
 
-#include "501A4.h"
+#include "convolve.h"
 #include <stdio.h>
 #include <ctime>
 #include <iostream>
@@ -39,7 +39,16 @@ int main(int argc, char *argv[])
 	}
 	cout << "Starting...: ";
 	
-	time_t startTime=printTime();
+	time_t startTime= time(0);   // get time now
+	struct tm * now = localtime(&startTime);
+	cout << (now->tm_year + 1900) << '-'
+		<< (now->tm_mon + 1) << '-'
+		<< now->tm_mday << " "
+		<< now->tm_hour << ":"
+		<< now->tm_min << ":"
+		<< now->tm_sec
+		<< endl;
+
 	char *drFile = argv[1];
 	char *imFile = argv[2];
 	char *outputFile = argv[3];
@@ -56,11 +65,17 @@ int main(int argc, char *argv[])
 		<< endl;
 	
 	cout << "End Time: ";
-	time_t endTime = printTime();
+	time_t endTime  = time(0);   // get time now
+	now = localtime(&endTime);
+	cout << (now->tm_year + 1900) << '-'
+		<< (now->tm_mon + 1) << '-'
+		<< now->tm_mday << " "
+		<< now->tm_hour << ":"
+		<< now->tm_min << ":"
+		<< now->tm_sec
+		<< endl;
 	//total cost time
 	cout <<"Total cost time: "<< difftime(endTime, startTime)<<" seconds." << endl;
-	
-	char inputChar;
 	cout << "Press Enter To Exit...";
 	cin.get();
 	return 0;
