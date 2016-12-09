@@ -54,8 +54,7 @@ void WaveFile::ReadWaveFile(char *filename)
 				LPBYTE tmpData = (LPBYTE)malloc(waveRiff.riffSize * sizeof(BYTE));
 				while (fileOffset < waveRiff.riffSize)
 				{
-					bool b = strncmp((LPCSTR)chunkId, "data", 4) == 0;
-					if (b)
+					if (strncmp((LPCSTR)chunkId, "data", 4) == 0)
 					{
 						if (waveData == NULL)
 							waveData = (LPBYTE)malloc(chunkSize * sizeof(BYTE));
