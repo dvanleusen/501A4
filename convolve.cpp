@@ -14,7 +14,7 @@
 #include <iostream>
 using namespace std;
 //======================================================================
-//#define IGNORE_Last 
+#define IGNORE_Last 
 #ifndef USE_Test
 WaveFile w_DryRecording, w_Impluse;
 time_t  printTime()
@@ -39,15 +39,7 @@ int main(int argc, char *argv[])
 	}
 	cout << "Starting...: ";
 	
-	time_t startTime= time(0);   // get time now
-	struct tm * now = localtime(&startTime);
-	cout << (now->tm_year + 1900) << '-'
-		<< (now->tm_mon + 1) << '-'
-		<< now->tm_mday << " "
-		<< now->tm_hour << ":"
-		<< now->tm_min << ":"
-		<< now->tm_sec
-		<< endl;
+	time_t startTime = printTime();
 
 	char *drFile = argv[1];
 	char *imFile = argv[2];
@@ -65,15 +57,7 @@ int main(int argc, char *argv[])
 		<< endl;
 	
 	cout << "End Time: ";
-	time_t endTime  = time(0);   // get time now
-	now = localtime(&endTime);
-	cout << (now->tm_year + 1900) << '-'
-		<< (now->tm_mon + 1) << '-'
-		<< now->tm_mday << " "
-		<< now->tm_hour << ":"
-		<< now->tm_min << ":"
-		<< now->tm_sec
-		<< endl;
+	time_t endTime  = printTime();
 	//total cost time
 	cout <<"Total cost time: "<< difftime(endTime, startTime)<<" seconds." << endl;
 	cout << "Press Enter To Exit...";
