@@ -9,15 +9,61 @@
 */
 
 #include "501A4.h"
+#include <stdio.h>
+#include <ctime>
+#include <iostream>
+using namespace std;
 //======================================================================
-
+//#define IGNORE_Last 
 #ifndef USE_Test
 WaveFile w_DryRecording, w_Impluse;
-bool bLevel1 = false;
-void main(int argc, char *argv[])
+time_t  printTime()
+{
+	time_t t = time(0);   // get time now
+	struct tm * now = localtime(&t);
+	cout << ( now->tm_year + 1900) << '-'
+		<< (now->tm_mon + 1) << '-'
+		<< now->tm_mday << " "
+		<< now->tm_hour << ":"
+		<< now->tm_min << ":"
+		<< now->tm_sec
+		<< endl;
+	return t;
+}
+int main(int argc, char *argv[])
 {
 	//_WAVE w = ReadWaveFile("DrumsDry.wav");
-	w_DryRecording.ReadWaveFile("DrumsDry.wav");
+	if (argc < 4) {
+		printf("%s \n", "parameter is wrong.");
+		return 1;
+	}
+	cout << "Starting...: ";
+	
+	time_t startTime=printTime();
+	char *drFile = argv[1];
+	char *imFile = argv[2];
+	char *outputFile = argv[3];
+	bool bLevel1 = false;
+#ifndef IGNORE_Last
+	if (argc > 4)
+		bLevel1= strncmp(argv[4], "true",4) == 0;
+#endif
+	w_DryRecording.ReadWaveFile(drFile);
+	w_DryRecording.Convolve(imFile, outputFile, bLevel1);
+	cout << "Convolution file is saved as \""
+		<< outputFile
+		<< "\" successfully."
+		<< endl;
+	
+	cout << "End Time: ";
+	time_t endTime = printTime();
+	//total cost time
+	cout <<"Total cost time: "<< difftime(endTime, startTime)<<" seconds." << endl;
+	
+	char inputChar;
+	cout << "Press Enter To Exit...";
+	cin.get();
+	return 0;
 }
 #endif
 
